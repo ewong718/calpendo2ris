@@ -41,11 +41,23 @@ select * from
     date_format(calpendo.bookings.date_of_birth,'%Y%m%d') as date_of_birth,     #DOB
     case calpendo.bookings.sex when 'Male' then 'M' when 'Female' then 'F' end as sex, #Sex
     concat('GC',calpendo.projects.project_code) as gco, #GCO
-    concat(lpad(calpendo.projects.PhysicianCactusID, 5, '0'),',',calpendo.projects.referring_physician) as ordering_physician,  #Ordering Physician
-    concat(lpad(calpendo.projects.PhysicianCactusID, 5, '0'),',',calpendo.projects.referring_physician) as referring_physician, #Referring Physician
+    case
+    when (calpendo.projects.PhysicianCactusID >= 100000) then concat(calpendo.projects.PhysicianCactusID,',',calpendo.projects.referring_physician)
+    else
+    concat(lpad(calpendo.projects.PhysicianCactusID, 5, '0'),',',calpendo.projects.referring_physician)
+    end as ordering_physician,  #Ordering Physician
+    case
+    when (calpendo.projects.PhysicianCactusID >= 100000) then concat(calpendo.projects.PhysicianCactusID,',',calpendo.projects.referring_physician)
+    else
+    concat(lpad(calpendo.projects.PhysicianCactusID, 5, '0'),',',calpendo.projects.referring_physician)
+    end as referring_physician, #Referring Physician
     calpendo.string_enum_values.ris_examcode as exam_type,                                                                      #RE ORG Exam Code
 
     case #Resource
+    when (calpendo.bookings.blind_read = 'Blinded' AND calpendo.projects.specified_radiologist <> '')
+    then concat('BLINDED READ, READER: ', calpendo.projects.specified_radiologist,', ',calpendo.resources.name)
+    when (calpendo.bookings.blind_read = 'Blinded')
+    then concat('BLINDED READ, ', calpendo.resources.name)
     when (calpendo.projects.specified_radiologist <> '') then concat('READER: ', calpendo.projects.specified_radiologist,', ',calpendo.resources.name)
     else
     calpendo.resources.name
@@ -64,7 +76,7 @@ select * from
 
     calpendo.resource_group_resources.resource_group_id=2 and
     (calpendo.bookings.status = 'APPROVED' OR calpendo.bookings.status = 'REQUESTED') and
-    (calpendo.bookings.development<>'Yes (Phantom)' AND calpendo.bookings.development<>'Yes (Animal)') and
+    (calpendo.bookings.development<>'Yes (Phantom)' AND calpendo.bookings.development<>'Yes (Animal)' AND calpendo.bookings.development<>'Standard of Care (SOC)' AND calpendo.bookings.development<>'SOC - Research') and
     (calpendo.projects.type_id=9 OR calpendo.projects.type_id=10 OR calpendo.projects.type_id=11) and
     (calpendo.bookings.$1 IS NOT NULL AND calpendo.bookings.$1 != 'None Selected') and
     DATE_ADD(calpendo.bookings.modified, INTERVAL 5 MINUTE) >= ${currentTime} and
